@@ -435,7 +435,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b59c84029c123b34294929dc234e5e47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spawnCount: 100
+  friction: 1
   lowerBound:
     x: -100
     y: -100
@@ -444,6 +444,11 @@ MonoBehaviour:
     x: 100
     y: 100
     z: 100
+  wrapX: 1
+  wrapY: 1
+  wrapZ: 1
+  bounce: 1
+  spawnCount: 1000
   particleMaterial: {fileID: 2100000, guid: d221f40cfef0ca74394b0f5425a77209, type: 2}
   particleMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!4 &2086709355
