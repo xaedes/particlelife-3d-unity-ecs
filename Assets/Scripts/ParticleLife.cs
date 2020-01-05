@@ -13,6 +13,10 @@ using Unity.Burst;
 public class ParticleLife : MonoBehaviour
 {
     public float friction = 0.9f;
+    public float strength = 10.0f;
+    public float radius = 5.0f;
+
+    public float minSimulationStepRate = 60.0f;
 
     public float3 lowerBound = -100;
     public float3 upperBound = +100;
