@@ -419,8 +419,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ced34878d37f4f6459b5c23682cfc9d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Enabled: 0
+  Enabled: 1
   particleLife: {fileID: 2086709354}
+  material: {fileID: 2100000, guid: 3d05f211a6322b444be4eafb51841bbc, type: 2}
 --- !u!1 &2086709353
 GameObject:
   m_ObjectHideFlags: 0
@@ -461,8 +462,10 @@ MonoBehaviour:
   simulationSpeedMultiplicator: 2
   maxSpeed: 5
   friction: 0.995
+  frictionTime: 0.1
   interactionStrength: 100
   radius: 5
+  radiusVariation: 1
   r_smooth: 2
   flatForce: 0
   gravityTarget:

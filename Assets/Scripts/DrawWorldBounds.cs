@@ -7,6 +7,7 @@ public class DrawWorldBounds : MonoBehaviour
 {
     public bool Enabled = false;
     public ParticleLife particleLife;
+    public Material material;
 
     private float3[] cube_vertices =
     {
@@ -40,8 +41,8 @@ public class DrawWorldBounds : MonoBehaviour
         float3 center = (particleLife.upperBound + particleLife.lowerBound) * 0.5f;
         if (cube_vertices.Length > 0 && cube_lines.Length > 0)
         {
+            material.SetPass(0);
             GL.Begin(GL.LINES);
-            GL.Color(new Color(0f, 0f, 0f));
             for (int i = 0; i < cube_lines.Length; i++)
             {
                 float3 a = cube_vertices[cube_lines[i].x] * dim + center;
@@ -51,6 +52,11 @@ public class DrawWorldBounds : MonoBehaviour
             }
             GL.End();
         }
+    }
+
+    private void Update()
+    {
+        Enabled = particleLife.drawWorldBounds;
     }
 
     void OnPostRender()

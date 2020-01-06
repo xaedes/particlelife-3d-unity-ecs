@@ -29,8 +29,10 @@ public class ParticleLife : MonoBehaviour
     public float simulationSpeedMultiplicator = 1.0f;
     public float maxSpeed = 10.0f;
     public float friction = 0.9f;
+    public float frictionTime = 0.1f;
     public float interactionStrength = 10.0f;
     public float radius = 5.0f;
+    public float radiusVariation = 0.0f;
     public float r_smooth = 2.0f;
     public bool flatForce = false;
 
@@ -46,6 +48,7 @@ public class ParticleLife : MonoBehaviour
     public bool wrapY = true;
     public bool wrapZ = true;
     public float bounce = 1.0f;
+    public bool drawWorldBounds = true;
 
     [Header("Particle Instantiation")]
     public int spawnCount = 100;
@@ -440,6 +443,16 @@ public class ParticleLife : MonoBehaviour
         GUILayout.Label("spawn count: " + spawnCount);
         spawnCount = (int)GUILayout.HorizontalSlider(spawnCount, 1, 1000);
 
+        GUILayout.Label("radius: " + radius + "\nonly for display and particle type initialization");
+        radius = GUILayout.HorizontalSlider(radius, 0.0f, +50.0f);
+
+        GUILayout.Label("radius variation: " + radiusVariation + "\nonly for display");
+        radiusVariation = GUILayout.HorizontalSlider(radiusVariation, 0.0f, radius);
+        if (GUILayout.Button("Random Particle Radii"))
+        {
+            setRandomRadii();
+        }
+
         GUILayout.Label("creation box center");
         GUILayout.Label("x: " + creationBoxCenter.x);
         creationBoxCenter.x = GUILayout.HorizontalSlider(creationBoxCenter.x, 0.0f, +1.0f);
@@ -506,6 +519,7 @@ public class ParticleLife : MonoBehaviour
     }
 
     private string strGravityStrength = null;
+    private string strInteractionStrength = null;
     void OnGUIWindowSimulation(int winID)
     {
         GUILayout.Label("sim step per sec: " + (((int)(m_simfps * 10 + 0.5f)) / 10.0f));
@@ -520,18 +534,37 @@ public class ParticleLife : MonoBehaviour
         GUILayout.Label("max speed: ");
         GUILayout.Label("" + maxSpeed);
         maxSpeed = GUILayout.HorizontalSlider(maxSpeed, 0.0f, +100.0f);
-        GUILayout.Label("friction per 1s: ");
+        GUILayout.Label("friction per "+ (((int)(frictionTime * 10 + 0.5f)) / 10.0f) + "s :");
+        GUILayout.Label("velocity will be friction*velocity after frictionTime seconds");
         GUILayout.Label("" + friction);
         friction = GUILayout.HorizontalSlider(friction, 0.0f, 1.0f);
+        GUILayout.Label("frictionTime " + frictionTime);
+        frictionTime = GUILayout.HorizontalSlider(frictionTime, 0.0f, 2.0f);
         GUILayout.Label("interaction strength: ");
-        GUILayout.Label("" + interactionStrength);
+        if (strInteractionStrength == null)
+            strInteractionStrength  = "" + interactionStrength;
+        strInteractionStrength  = GUILayout.TextField(strInteractionStrength );
+        float interactionStrengthFromStr;
+
+        if (GUI.changed)
+            if (float.TryParse(strInteractionStrength , out interactionStrengthFromStr))
+            {
+                interactionStrength = interactionStrengthFromStr;
+                strInteractionStrength  = "" + interactionStrength;
+            }
         interactionStrength = GUILayout.HorizontalSlider(interactionStrength, -2000.0f, 2000.0f);
+        if (GUI.changed)
+        {
+            strInteractionStrength  = "" + interactionStrength;
+        }
+
+        //GUILayout.Label("" + interactionStrength);
+        //interactionStrength = GUILayout.HorizontalSlider(interactionStrength, -2000.0f, 2000.0f);
         flatForce = GUILayout.Toggle(flatForce, "flat force");
 
         GUILayout.Space(25f);
 
-        GUILayout.Label("radius: " + radius);
-        radius = GUILayout.HorizontalSlider(radius, 0.0f, +50.0f);
+
         GUILayout.Label("r_smooth: " + r_smooth);
         r_smooth = GUILayout.HorizontalSlider(r_smooth, 0.0f, +10.0f);
 
@@ -549,8 +582,6 @@ public class ParticleLife : MonoBehaviour
                 gravityStrength = gravityStrengthFromStr;
                 strGravityStrength = "" + gravityStrength;
             }
-        //float gravityStrengthSlide = math.max(math.abs(gravityStrength / 2f), 1000f);
-        //gravityStrength = GUILayout.HorizontalSlider(gravityStrength, gravityStrength - gravityStrengthSlide, gravityStrength + gravityStrengthSlide);
         gravityStrength = GUILayout.HorizontalSlider(gravityStrength, -1e9f, +1e9f);
         if (GUI.changed)
         {
@@ -585,6 +616,7 @@ public class ParticleLife : MonoBehaviour
     private bool m_guiCubeWorldBox;
     void OnGUIWindowWorldBounds(int winID)
     {
+        drawWorldBounds = GUILayout.Toggle(drawWorldBounds, "draw world bounds");
         m_guiWorldBoxSize = upperBound - lowerBound;
         m_guiWorldBoxCenter = lowerBound + m_guiWorldBoxSize * 0.5f;
         GUILayout.Label("world box center");
@@ -607,15 +639,15 @@ public class ParticleLife : MonoBehaviour
         GUILayout.Label("max value: " + m_guiWorldBoxSizeMaxValue);
         m_guiWorldBoxSizeMaxValue = GUILayout.HorizontalSlider(m_guiWorldBoxSizeMaxValue, 1.0f, +20000.0f);
         GUILayout.Label("x: " + m_guiWorldBoxSize.x);
-        m_guiWorldBoxSize.x = GUILayout.HorizontalSlider(m_guiWorldBoxSize.x, 1.0f, m_guiWorldBoxSizeMaxValue);
+        m_guiWorldBoxSize.x = GUILayout.HorizontalSlider(m_guiWorldBoxSize.x, 0.0f, m_guiWorldBoxSizeMaxValue);
         if (m_guiCubeWorldBox && GUI.changed) m_guiWorldBoxSize = m_guiWorldBoxSize.x;
 
         GUILayout.Label("y: " + m_guiWorldBoxSize.y);
-        m_guiWorldBoxSize.y = GUILayout.HorizontalSlider(m_guiWorldBoxSize.y, 1.0f, m_guiWorldBoxSizeMaxValue);
+        m_guiWorldBoxSize.y = GUILayout.HorizontalSlider(m_guiWorldBoxSize.y, 0.0f, m_guiWorldBoxSizeMaxValue);
         if (m_guiCubeWorldBox && GUI.changed) m_guiWorldBoxSize = m_guiWorldBoxSize.y;
 
         GUILayout.Label("z: " + m_guiWorldBoxSize.z);
-        m_guiWorldBoxSize.z = GUILayout.HorizontalSlider(m_guiWorldBoxSize.z, 1.0f, m_guiWorldBoxSizeMaxValue);
+        m_guiWorldBoxSize.z = GUILayout.HorizontalSlider(m_guiWorldBoxSize.z, 0.0f, m_guiWorldBoxSizeMaxValue);
         if (m_guiCubeWorldBox && GUI.changed) m_guiWorldBoxSize = m_guiWorldBoxSize.z;
 
         lowerBound = m_guiWorldBoxCenter - m_guiWorldBoxSize * 0.5f;
@@ -710,6 +742,14 @@ public class ParticleLife : MonoBehaviour
         setRandomTypes();
         setSystemTypeArrays();
     }
+    void setRandomRadii()
+    {
+        for (int i = 0; i < m_entities.Length; i++)
+        {
+            float r = radius + Random.Range(-radiusVariation, radiusVariation);
+            m_manager.SetComponentData(m_entities[i], new Scale { Value = r * 2f });
+        }
+    }
     void clearParticles()
     {
         for (int i = 0; i < m_entities.Length; i++)
@@ -739,10 +779,11 @@ public class ParticleLife : MonoBehaviour
             float vy = Random.Range(-2.0f, 2.0f);
             float vz = Random.Range(-2.0f, 2.0f);
             int type = Random.Range(0, m_numTypes);
+            float r = radius + Random.Range(-radiusVariation, radiusVariation);
             var mat = (type < m_adjustedMaterials.Count) ? m_adjustedMaterials[type] : particleMaterial;
             m_manager.SetComponentData(particles[i], new Translation { Value = new float3(x, y, z) });
             m_manager.SetComponentData(particles[i], new Particle { type = type, vel = new float3(vx, vy, vz), cell_number = -1 });
-            m_manager.SetComponentData(particles[i], new Scale { Value = radius * 2f });
+            m_manager.SetComponentData(particles[i], new Scale { Value = r * 2f });
             m_manager.SetSharedComponentData(particles[i], new RenderMesh { material = mat, mesh = particleMesh });
             m_entities.Add(particles[i]);
         }

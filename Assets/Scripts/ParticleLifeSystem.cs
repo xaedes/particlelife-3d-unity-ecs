@@ -115,6 +115,7 @@ public class ParticleLifeSystem : JobComponentSystem
 
         public float dt;
         public float friction;
+        public float frictionTime;
         public float maxSpeed;
 
         public float3 lowerBound;
@@ -258,11 +259,26 @@ public class ParticleLifeSystem : JobComponentSystem
             #endregion
 
             #region friction
-            if (abs(1-friction) > eps)
+            // from ParticleLife:
+            //   particle.vel *= friction
+            // friction is actually exponentiall weighted gain filter:
+            //   particle.vel = 0 * gain + (1-gain) *  particle.vel
+            //   with gain == 1-friction
+            // to allow variable step rate the gain(i.e. friction) value must be given for a reference time step 'frictionTime'
+            // velocity will be friction*velocity after frictionTime seconds
+
+            // dont apply friction when friction==1 or no time passes 
+            if ((abs(1-friction)) > eps && (abs(dt) > eps))
             {
-                float friction_gain0_1s = 1 - friction;
-                float friction_gain0_corrected = dt / (1 * (1 - friction_gain0_1s) / friction_gain0_1s + dt);
-                particle.vel = particle.vel * (1-friction_gain0_corrected);
+                if (abs(friction) < eps) particle.vel = 0;
+                else  
+                {
+                    // convert exponentiall weighted gain filter to different time step
+                    float friction_gain0_1s = 1 - friction;
+                    float friction_gain0_corrected = dt / (frictionTime * (1 - friction_gain0_1s) / friction_gain0_1s + dt);
+                    // and apply it, omit 0*gain
+                    particle.vel = particle.vel * (1 - friction_gain0_corrected);
+                }
             }
             #endregion
 
@@ -469,6 +485,7 @@ public class ParticleLifeSystem : JobComponentSystem
         job.r_smooth = particleLife.r_smooth;
         job.flatForce = particleLife.flatForce;
         job.friction = particleLife.friction;
+        job.frictionTime = particleLife.frictionTime;
         job.strength = particleLife.interactionStrength;
         job.maxSpeed = particleLife.maxSpeed;
 
