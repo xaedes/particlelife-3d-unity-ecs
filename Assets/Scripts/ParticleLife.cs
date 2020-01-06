@@ -24,12 +24,18 @@ public class ParticleLife : MonoBehaviour
 
     [Header("Simulation Properties")]
     public float minSimulationStepRate = 60.0f;
+    public float simulationSpeedMultiplicator = 1.0f;
     public float maxSpeed = 10.0f;
     public float friction = 0.9f;
     public float interactionStrength = 10.0f;
     public float radius = 5.0f;
     public float r_smooth = 2.0f;
     public bool flatForce = false;
+
+    [Header("Gravity")]
+    public float3 gravityTarget = 0.5f;
+    public float gravityStrength = 1e8f;
+    public float maxGravity = 7f;
 
     [Header("World Properties")]
     public float3 lowerBound = -100;
@@ -168,6 +174,32 @@ public class ParticleLife : MonoBehaviour
         }
     }
 
+
+    void setSystemTypeArrays()
+    {
+        m_particleLifeSystem.Attract = m_Attract;
+        m_particleLifeSystem.RangeMin = m_RangeMin;
+        m_particleLifeSystem.RangeMax = m_RangeMax;
+        m_particleLifeSystem.numTypes = m_numTypes;
+    }
+
+    void updateParticleTypesAndMaterials()
+    {
+        if (m_adjustedMaterials.Count == 0) return;
+        for (int i = 0; i < m_entities.Length; i++)
+        {
+            var particle = m_manager.GetComponentData<Particle>(m_entities[i]);
+            particle.type = particle.type % m_adjustedMaterials.Count;
+
+            var mat = (particle.type < m_adjustedMaterials.Count)
+                ? m_adjustedMaterials[particle.type]
+                : particleMaterial;
+            m_manager.SetComponentData<Particle>(m_entities[i], particle);
+            m_manager.SetSharedComponentData(m_entities[i],
+                new RenderMesh { material = mat, mesh = particleMesh });
+        }
+    }
+
     void Start()
     {
         m_manager = World.DefaultGameObjectInjectionWorld.EntityManager;
@@ -200,29 +232,89 @@ public class ParticleLife : MonoBehaviour
         m_RangeMax.Dispose();
     }
 
-    void setSystemTypeArrays()
+    private Rect m_guiWindowRect = new Rect(20,20,200,300);
+    private Rect m_guiConfirmClearWindowRect = new Rect(300,300,200,100);
+    private bool m_showConfirmClear=false;
+    private void OnGUI()
     {
-        m_particleLifeSystem.Attract = m_Attract;
-        m_particleLifeSystem.RangeMin = m_RangeMin;
-        m_particleLifeSystem.RangeMax = m_RangeMax;
-        m_particleLifeSystem.numTypes = m_numTypes;
-    }
-    
-    void updateParticleTypesAndMaterials()
-    {
-        if (m_adjustedMaterials.Count == 0) return;
-        for (int i = 0; i < m_entities.Length; i++)
+        m_guiWindowRect = GUI.Window(0, m_guiWindowRect, OnGuiWindow, "Particle Life 3D");
+        if (m_showConfirmClear)
         {
-            var particle = m_manager.GetComponentData<Particle>(m_entities[i]);
-            particle.type = particle.type % m_adjustedMaterials.Count;
-            
-            var mat = (particle.type < m_adjustedMaterials.Count) 
-                ? m_adjustedMaterials[particle.type] 
-                : particleMaterial;
-            m_manager.SetComponentData<Particle>(m_entities[i], particle);
-            m_manager.SetSharedComponentData(m_entities[i], 
-                new RenderMesh { material = mat, mesh = particleMesh });
+            m_guiConfirmClearWindowRect = GUI.Window(1, m_guiConfirmClearWindowRect, OnGuiConfirmClearWindow, "Confirm Clear");
+
         }
+        //if (numParticleTypes != m_numTypes)
+        //{
+        //    updateParticleTypeNumber();
+        //}
+    }
+
+    void OnGuiWindow(int winID)
+    {
+        GUILayout.Label("num particles: " + m_entities.Length);
+        GUILayout.Space(25f);
+        GUILayout.Label("num particle types: " + numParticleTypes);
+        numParticleTypes = (int)GUILayout.HorizontalSlider(numParticleTypes, 1, 200);
+
+        if (GUILayout.Button("Spawn Particles"))
+        {
+            spawnParticles();
+        }
+        if (GUILayout.Button("Clear Particles"))
+        {
+            m_showConfirmClear = true;
+        }
+
+        if (GUILayout.Button("Respawn Particles"))
+        {
+            respawnParticles();
+        }
+        if (GUILayout.Button("Randomize Particle Types"))
+        {
+            randomizeParticleTypes();
+        }
+        GUI.DragWindow(new Rect(0,0,10000,10));
+    }
+
+    void OnGuiConfirmClearWindow(int winID)
+    {
+        if (GUILayout.Button("Clear Particles"))
+        {
+            clearParticles();
+            m_showConfirmClear = false;
+        }
+        GUILayout.Space(25f);
+        if (GUILayout.Button("Cancel"))
+        {
+            m_showConfirmClear = false;
+        }
+        GUI.DragWindow(new Rect(0,0,10000,10));
+    }
+
+    void updateParticleTypeNumber()
+    {
+        initParticleTypeArrays(numParticleTypes);
+        setRandomTypes();
+        setSystemTypeArrays();
+        updateParticleTypesAndMaterials();
+    }
+
+    void spawnParticles()
+    {
+        addParticles(spawnCount);
+    }
+
+    void respawnParticles()
+    {
+        var num = m_entities.Length;
+        clearParticles();
+        addParticles(num);
+    }
+
+    void randomizeParticleTypes()
+    {
+        setRandomTypes();
+        setSystemTypeArrays();
     }
 
     // Update is called once per frame
@@ -230,14 +322,11 @@ public class ParticleLife : MonoBehaviour
     {
         if (numParticleTypes != m_numTypes)
         {
-            initParticleTypeArrays(numParticleTypes);
-            setRandomTypes();
-            setSystemTypeArrays();
-            updateParticleTypesAndMaterials();
+            updateParticleTypeNumber();
         }
         if (Input.GetKeyDown("space"))
         {
-            addParticles(spawnCount);
+            spawnParticles();
         }
         if (Input.GetKeyDown("c"))
         {
@@ -245,14 +334,11 @@ public class ParticleLife : MonoBehaviour
         }
         if (Input.GetKeyDown("r"))
         {
-            var num = m_entities.Length;
-            clearParticles();
-            addParticles(num);
+            respawnParticles();
         }
         if (Input.GetKeyDown("t"))
         {
-            setRandomTypes();
-            setSystemTypeArrays();
+            randomizeParticleTypes();
         }
     }
     void clearParticles()

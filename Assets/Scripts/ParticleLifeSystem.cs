@@ -105,14 +105,14 @@ public class ParticleLifeSystem : JobComponentSystem
             #endregion
         }
     }
-    
-    //[BurstCompile]
+
+    [BurstCompile]
     struct ParticleLifeSystemJobFor : IJobParallelFor
     {
         //[DeallocateOnJobCompletion, ReadOnly]
         //public NativeArray<Entity> entities;
 
-        public float deltaTime;
+        public float dt;
         public float friction;
         public float maxSpeed;
 
@@ -133,6 +133,9 @@ public class ParticleLifeSystem : JobComponentSystem
         [ReadOnly] public NativeArray<float> Attract;
         [ReadOnly] public NativeArray<float> RangeMin;
         [ReadOnly] public NativeArray<float> RangeMax;
+        public float3 gravityTarget;
+        public float gravityStrength;
+        public float maxGravity;
 
         //public ComponentDataFromEntity<Translation> translations;
         //public ComponentDataFromEntity<Particle> particles;
@@ -156,6 +159,7 @@ public class ParticleLifeSystem : JobComponentSystem
             Translation translation = oldTranslations[index];
             Particle particle = oldParticles[index];
 
+            #region particle interaction
             if (numTypes > 0)
             { 
                 int num = particles.Length;
@@ -224,17 +228,41 @@ public class ParticleLifeSystem : JobComponentSystem
                         }
                     }
 
-                    particle.vel = particle.vel + direction * f * strength * deltaTime;
-                    //otherParticle.vel = otherParticle.vel - direction * deltaTime * f;
+                    particle.vel = particle.vel + direction * f * strength * dt;
+                    //otherParticle.vel = otherParticle.vel - direction * dt * f;
                     //particles[k] = otherParticle;
                 }
             }
+            #endregion
+
+            #region gravity
+            {
+                float3 diff = gravityTarget - translation.Value;
+                float range = math.sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+                if (range > eps)
+                {
+                    float3 direction = diff / range;
+                    float g = gravityStrength / (range * range);
+                    if (g < -abs(maxGravity)) g = -abs(maxGravity);
+                    if (g > +abs(maxGravity)) g = +abs(maxGravity);
+                    particle.vel = particle.vel + direction * g * dt;
+
+                }
+            }
+
+            #endregion
 
             #region movement
-            translation.Value = translation.Value + particle.vel * deltaTime;
+            translation.Value = translation.Value + particle.vel * dt;
             #endregion
+
             #region friction
-            particle.vel = particle.vel * friction;
+            if (abs(1-friction) > eps)
+            {
+                float friction_gain0_1s = 1 - friction;
+                float friction_gain0_corrected = dt / (1 * (1 - friction_gain0_1s) / friction_gain0_1s + dt);
+                particle.vel = particle.vel * (1-friction_gain0_corrected);
+            }
             #endregion
 
             #region check universe bounds
@@ -429,11 +457,11 @@ public class ParticleLifeSystem : JobComponentSystem
         job.eps = 1e-6f;
         if (abs(particleLife.minSimulationStepRate) > job.eps)
         {
-            job.deltaTime = min(1.0f / abs(particleLife.minSimulationStepRate), UnityEngine.Time.deltaTime);
+            job.dt = particleLife.simulationSpeedMultiplicator * min(1.0f / abs(particleLife.minSimulationStepRate), UnityEngine.Time.deltaTime);
         }
         else
         {
-            job.deltaTime = UnityEngine.Time.deltaTime;
+            job.dt = particleLife.simulationSpeedMultiplicator * UnityEngine.Time.deltaTime;
         }
         job.radius = particleLife.radius;
         job.r_smooth = particleLife.r_smooth;
@@ -441,6 +469,10 @@ public class ParticleLifeSystem : JobComponentSystem
         job.friction = particleLife.friction;
         job.strength = particleLife.interactionStrength;
         job.maxSpeed = particleLife.maxSpeed;
+
+        job.gravityTarget = particleLife.gravityTarget;
+        job.gravityStrength = particleLife.gravityStrength;
+        job.maxGravity = particleLife.maxGravity;
 
         job.numTypes = m_copyOfNumTypes;
         job.Attract = m_copyOfAttract;
