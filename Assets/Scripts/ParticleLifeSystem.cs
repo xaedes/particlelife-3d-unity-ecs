@@ -10,6 +10,7 @@ using static Unity.Mathematics.math;
 public class ParticleLifeSystem : JobComponentSystem
 {
     public ParticleLife particleLife;
+    public float lastSimulationDeltaTime;
 
     [BurstCompile]
     struct ParticleLifeSystemJob : IJobForEach<Translation, Particle>
@@ -457,12 +458,13 @@ public class ParticleLifeSystem : JobComponentSystem
         job.eps = 1e-6f;
         if (abs(particleLife.minSimulationStepRate) > job.eps)
         {
-            job.dt = particleLife.simulationSpeedMultiplicator * min(1.0f / abs(particleLife.minSimulationStepRate), UnityEngine.Time.deltaTime);
+            job.dt = min(1.0f / abs(particleLife.minSimulationStepRate), particleLife.simulationSpeedMultiplicator * UnityEngine.Time.deltaTime);
         }
         else
         {
             job.dt = particleLife.simulationSpeedMultiplicator * UnityEngine.Time.deltaTime;
         }
+        lastSimulationDeltaTime = job.dt;
         job.radius = particleLife.radius;
         job.r_smooth = particleLife.r_smooth;
         job.flatForce = particleLife.flatForce;
@@ -470,9 +472,6 @@ public class ParticleLifeSystem : JobComponentSystem
         job.strength = particleLife.interactionStrength;
         job.maxSpeed = particleLife.maxSpeed;
 
-        job.gravityTarget = particleLife.gravityTarget;
-        job.gravityStrength = particleLife.gravityStrength;
-        job.maxGravity = particleLife.maxGravity;
 
         job.numTypes = m_copyOfNumTypes;
         job.Attract = m_copyOfAttract;
@@ -487,6 +486,10 @@ public class ParticleLifeSystem : JobComponentSystem
         job.wrapY = particleLife.wrapY;
         job.wrapZ = particleLife.wrapZ;
         job.bounce = particleLife.bounce;
+
+        job.gravityTarget = particleLife.gravityTarget * job.dim + job.lowerBound;
+        job.gravityStrength = particleLife.gravityStrength;
+        job.maxGravity = particleLife.maxGravity;
 
         job.oldTranslations = m_query.ToComponentDataArray<Translation>(Allocator.TempJob);
         job.oldParticles = m_query.ToComponentDataArray<Particle>(Allocator.TempJob);

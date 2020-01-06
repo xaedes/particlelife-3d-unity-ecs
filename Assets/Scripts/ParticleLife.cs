@@ -10,8 +10,10 @@ using Random = UnityEngine.Random;
 using Unity.Burst;
 
 
+
 public class ParticleLife : MonoBehaviour
 {
+    #region Properties
     [Header("Particle Types")]
     //public int maxInteractions = 1000000;
     public int numParticleTypes = 10;
@@ -54,21 +56,26 @@ public class ParticleLife : MonoBehaviour
     public Material particleMaterial;
     public Mesh particleMesh;
 
+    #endregion
 
 
+    #region private members for particle types
     private int m_numTypes = 0;
     private NativeArray<Color> m_Colors;
     private NativeArray<float> m_Attract;
     private NativeArray<float> m_RangeMin;
     private NativeArray<float> m_RangeMax;
     private List<Material> m_adjustedMaterials = new List<Material>();
+    #endregion
 
-
+    #region private members for entitities
+    private NativeList<Entity> m_entities;
     private static EntityManager m_manager;
     private EntityArchetype m_archetype;
     private ParticleLifeSystem m_particleLifeSystem;
-    private NativeList<Entity> m_entities;
+    #endregion
 
+    #region code of particle types
     void initParticleTypeArrays(int num)
     {
         if(m_Colors.IsCreated && m_Colors.Length>0) m_Colors.Dispose();
@@ -174,7 +181,6 @@ public class ParticleLife : MonoBehaviour
         }
     }
 
-
     void setSystemTypeArrays()
     {
         m_particleLifeSystem.Attract = m_Attract;
@@ -199,7 +205,9 @@ public class ParticleLife : MonoBehaviour
                 new RenderMesh { material = mat, mesh = particleMesh });
         }
     }
+    #endregion
 
+    #region startup and cleanup
     void Start()
     {
         m_manager = World.DefaultGameObjectInjectionWorld.EntityManager;
@@ -231,49 +239,320 @@ public class ParticleLife : MonoBehaviour
         m_RangeMin.Dispose();
         m_RangeMax.Dispose();
     }
+    #endregion
 
-    private Rect m_guiWindowRect = new Rect(20,20,200,300);
-    private Rect m_guiConfirmClearWindowRect = new Rect(300,300,200,100);
-    private bool m_showConfirmClear=false;
+    #region update and user input
+    private float m_fps = 0f;
+    private float m_fpsGain = 0.05f;
+    private float m_simfps= 0f;
+    private float m_simfpsGain = 0.05f;
+    private float m_simTimePerSecond = 0f;
+    void Update()
+    {
+        if(math.abs(UnityEngine.Time.deltaTime) > 1e-9)
+        {
+            var fps = 1.0f / UnityEngine.Time.deltaTime;
+            m_fps = fps * m_fpsGain + (1f - m_fpsGain) * m_fps;
+        }
+        if (math.abs(m_particleLifeSystem.lastSimulationDeltaTime) > 1e-9)
+        {
+            var simfps = 1.0f / m_particleLifeSystem.lastSimulationDeltaTime;
+            m_simfps = simfps * m_simfpsGain + (1f - m_simfpsGain) * m_simfps;
+        }
+        m_simTimePerSecond = m_fps / m_simfps;
+        if (numParticleTypes != m_numTypes)
+        {
+            updateParticleTypeNumber();
+        }
+        if (Input.GetKeyDown("space"))
+        {
+            spawnParticles();
+        }
+        if (Input.GetKeyDown("c"))
+        {
+            clearParticles();
+        }
+        if (Input.GetKeyDown("r"))
+        {
+            respawnParticles();
+        }
+        if (Input.GetKeyDown("t"))
+        {
+            randomizeParticleTypes();
+        }
+        if (Input.GetMouseButtonDown(0))
+        {
+            m_guiShowMain = true;
+        }
+    }
+    #endregion
+
+    #region code of GUI
+
+    private enum GuiWindowID : int
+    {
+        Main = 0,
+        ConfirmClear = 1,
+        ParticleTypes = 2,
+        Particles = 3,
+        Simulation = 4,
+    }
+    private Rect m_guiDragArea = new Rect(0, 0, 10000, 20);
+
+    private Rect m_guiWindowRectMain = new Rect(20,20,200,280);
+    private Rect m_guiWindowRectConfirmClear = new Rect(600,300,200,100);
+    private Rect m_guiWindowRectParticleTypes = new Rect(20,300, 200, 200);
+    private Rect m_guiWindowRectParticles = new Rect(220,300, 200, 200);
+    private Rect m_guiWindowRectSimulation = new Rect(420,300, 200, 200);
+
+    private bool m_guiShowMain = true;
+    private bool m_guiShowConfirmClear = false;
+    private bool m_guiShowParticleTypes = false;
+    private bool m_guiShowParticles = false;
+    private bool m_guiShowSimulation = false;
+
+    private bool m_guiWindowMainIsResizing = false;
+    private bool m_guiWindowParticleTypesIsResizing = false;
+    private bool m_guiWindowParticlesIsResizing = false;
+    private bool m_guiWindowSimulationIsResizing = false;
+
+    private Vector2 m_guiWindowMainScrollPosition;
+
+
     private void OnGUI()
     {
-        m_guiWindowRect = GUI.Window(0, m_guiWindowRect, OnGuiWindow, "Particle Life 3D");
-        if (m_showConfirmClear)
+        if(m_guiShowMain)
         {
-            m_guiConfirmClearWindowRect = GUI.Window(1, m_guiConfirmClearWindowRect, OnGuiConfirmClearWindow, "Confirm Clear");
-
+            m_guiWindowRectMain = GUILayout.Window((int)GuiWindowID.Main, m_guiWindowRectMain, 
+                OnGuiWindowMain, "Particle Life 3D", 
+                GUILayout.MinWidth(200), GUILayout.MinHeight(250));
         }
-        //if (numParticleTypes != m_numTypes)
-        //{
-        //    updateParticleTypeNumber();
-        //}
+        if (m_guiShowConfirmClear)
+        {
+            m_guiWindowRectConfirmClear = GUI.ModalWindow((int)GuiWindowID.ConfirmClear, m_guiWindowRectConfirmClear, OnGuiConfirmClearWindow, "Confirm Clear");
+            //m_guiWindowRectConfirmClear = GUILayout.Window((int)GuiWindowID.ConfirmClear, m_guiWindowRectConfirmClear, OnGuiConfirmClearWindow, "Confirm Clear");
+        }
+        if (m_guiShowParticleTypes)
+        {
+            m_guiWindowRectParticleTypes = GUILayout.Window((int)GuiWindowID.ParticleTypes, m_guiWindowRectParticleTypes, 
+                OnGUIWindowParticleTypes, "Particle Types",
+                GUILayout.MinWidth(200), GUILayout.MinHeight(200));
+        }
+        if (m_guiShowParticles)
+        {
+            m_guiWindowRectParticles = GUILayout.Window((int)GuiWindowID.Particles, m_guiWindowRectParticles, 
+                OnGUIWindowParticles, "Particles",
+                GUILayout.MinWidth(200), GUILayout.MinHeight(200));
+        }
+        if (m_guiShowSimulation)
+        {
+            m_guiWindowRectSimulation = GUILayout.Window((int)GuiWindowID.Simulation, m_guiWindowRectSimulation, 
+                OnGUIWindowSimulation, "Simulation",
+                GUILayout.MinWidth(200), GUILayout.MinHeight(200));
+        }
     }
 
-    void OnGuiWindow(int winID)
+    void OnGuiWindowMain(int winID)
+    {
+        m_guiWindowMainScrollPosition= GUILayout.BeginScrollView(m_guiWindowMainScrollPosition);
+        GUILayout.Label("num particles: " + m_entities.Length);
+        GUILayout.Label("frames per sec: " + (((int)(m_fps * 10 + 0.5f)) / 10.0f));
+        GUILayout.Label("sim step per sec: " + (((int)(m_simfps * 10 + 0.5f)) / 10.0f));
+        GUILayout.Label("sim time per sec: " + (((int)(m_simTimePerSecond * 10 + 0.5f)) / 10.0f));
+        //GUILayout.Label("fps gain: " + m_fpsGain);
+        //m_fpsGain = GUILayout.HorizontalSlider(m_fpsGain, 0f, 1f);
+        GUILayout.Space(25f);
+
+        if (GUILayout.Button("Simulation"))
+        {
+            m_guiShowSimulation = !m_guiShowSimulation;
+        }
+        if (GUILayout.Button("Particles"))
+        {
+            m_guiShowParticles = !m_guiShowParticles;
+        }
+        if (GUILayout.Button("Particles Types"))
+        {
+            m_guiShowParticleTypes = !m_guiShowParticleTypes;
+        }
+
+        GUILayout.EndScrollView();
+
+        GUI_WindowControls(ref m_guiWindowRectMain, ref m_guiShowMain, ref m_guiWindowMainIsResizing);
+        GUI.DragWindow(m_guiDragArea);
+    }
+
+    private bool m_guiCubeCreationBox;
+    
+    void OnGUIWindowParticles(int winID)
     {
         GUILayout.Label("num particles: " + m_entities.Length);
+        GUILayout.Label("frames per sec: " + (((int)(m_fps * 10 + 0.5f)) / 10.0f));
+        //GUILayout.Label("fps: " + (((int)(m_fps * 10)) / 10.0f));
         GUILayout.Space(25f);
-        GUILayout.Label("num particle types: " + numParticleTypes);
-        numParticleTypes = (int)GUILayout.HorizontalSlider(numParticleTypes, 1, 200);
+
+        GUILayout.Label("spawn count: " + spawnCount);
+        spawnCount = (int)GUILayout.HorizontalSlider(spawnCount, 1, 1000);
+
+        GUILayout.Label("creation box center");
+        GUILayout.Label("x: " + creationBoxCenter.x);
+        creationBoxCenter.x = GUILayout.HorizontalSlider(creationBoxCenter.x, 0.0f, +1.0f);
+        GUILayout.Label("y: " + creationBoxCenter.y);
+        creationBoxCenter.y = GUILayout.HorizontalSlider(creationBoxCenter.y, 0.0f, +1.0f);
+        GUILayout.Label("z: " + creationBoxCenter.z);
+        creationBoxCenter.z = GUILayout.HorizontalSlider(creationBoxCenter.z, 0.0f, +1.0f);
+        GUILayout.Label("creation box size");
+        var newCubeCreationBox = GUILayout.Toggle(m_guiCubeCreationBox, "toggle cube");
+        if (newCubeCreationBox && !m_guiCubeCreationBox)
+        {
+            float mid = (creationBoxSize.x + creationBoxSize.y + creationBoxSize.z) / 3.0f;
+            creationBoxSize.x = mid;
+            creationBoxSize.y = mid;
+            creationBoxSize.z = mid;
+        }
+        m_guiCubeCreationBox = newCubeCreationBox;
+
+        GUILayout.Label("x: " + creationBoxSize.x);
+        var creationBoxSizeX = GUILayout.HorizontalSlider(creationBoxSize.x, 0.0f, +1.0f);
+        if (m_guiCubeCreationBox && GUI.changed) creationBoxSize = creationBoxSizeX;
+
+        GUILayout.Label("y: " + creationBoxSize.y);
+        var creationBoxSizeY = GUILayout.HorizontalSlider(creationBoxSize.y, 0.0f, +1.0f);
+        if (m_guiCubeCreationBox && GUI.changed) creationBoxSize = creationBoxSizeY;
+
+        GUILayout.Label("z: " + creationBoxSize.z);
+        var creationBoxSizeZ = GUILayout.HorizontalSlider(creationBoxSize.z, 0.0f, +1.0f);
+        if (m_guiCubeCreationBox && GUI.changed) creationBoxSize = creationBoxSizeZ;
+
+        if (!m_guiCubeCreationBox)
+        {
+            creationBoxSize.x = creationBoxSizeX;
+            creationBoxSize.y = creationBoxSizeY;
+            creationBoxSize.z = creationBoxSizeZ;
+        }
 
         if (GUILayout.Button("Spawn Particles"))
         {
             spawnParticles();
         }
-        if (GUILayout.Button("Clear Particles"))
+        if (GUILayout.Button("Clear Particles") && m_entities.Length > 0)
         {
-            m_showConfirmClear = true;
+            m_guiShowConfirmClear = true;
+
+            m_guiWindowRectConfirmClear.center = Camera.main.pixelRect.center;
         }
 
         if (GUILayout.Button("Respawn Particles"))
         {
             respawnParticles();
         }
+
+        GUI_WindowControls(ref m_guiWindowRectParticles, ref m_guiShowParticles, ref m_guiWindowParticlesIsResizing);
+        GUI.DragWindow(m_guiDragArea);
+    }
+    void OnGUIWindowParticleTypes(int winID)
+    {
+        GUILayout.Label("frames per sec: " + (((int)(m_fps * 10 + 0.5f)) / 10.0f));
+        GUILayout.Label("num particle types: " + numParticleTypes);
+        numParticleTypes = (int)GUILayout.HorizontalSlider(numParticleTypes, 1, 200);
+        GUILayout.Label("attract mean: " + attractMean);
+        attractMean = GUILayout.HorizontalSlider(attractMean, -10.0f, +10.0f);
+        GUILayout.Label("attract std: " + attractStd);
+        attractStd = GUILayout.HorizontalSlider(attractStd, 0.0f, +10.0f);
+        GUILayout.Label("lower range min: " + rangeMinLower);
+        rangeMinLower = GUILayout.HorizontalSlider(rangeMinLower, 0.0f, +50.0f);
+        GUILayout.Label("upper range min: " + rangeMinUpper);
+        rangeMinUpper = GUILayout.HorizontalSlider(rangeMinUpper, rangeMinLower, +50.0f);
+        GUILayout.Label("lower range max: " + rangeMaxLower);
+        rangeMaxLower = GUILayout.HorizontalSlider(rangeMaxLower, 0.0f, +50.0f);
+        GUILayout.Label("upper range max: " + rangeMaxUpper);
+        rangeMaxUpper = GUILayout.HorizontalSlider(rangeMaxUpper, rangeMaxLower, +50.0f);
+        GUILayout.Space(25f);
+
         if (GUILayout.Button("Randomize Particle Types"))
         {
             randomizeParticleTypes();
         }
-        GUI.DragWindow(new Rect(0,0,10000,10));
+
+        GUILayout.Space(25f);
+
+        GUI_WindowControls(ref m_guiWindowRectParticleTypes, ref m_guiShowParticleTypes, ref m_guiWindowParticleTypesIsResizing);
+        GUI.DragWindow(m_guiDragArea);
+    }
+
+    private string strGravityStrength = null;
+    void OnGUIWindowSimulation(int winID)
+    {
+        GUILayout.Label("sim step per sec: " + (((int)(m_simfps * 10 + 0.5f)) / 10.0f));
+        GUILayout.Label("sim time per sec: " + (((int)(m_simTimePerSecond * 10 + 0.5f)) / 10.0f));
+        //GUILayout.Label("sim fps: " + (((int)(m_simfps * 10)) / 10.0f));
+        GUILayout.Label("min steps per simulated sec: ");
+        GUILayout.Label("" + minSimulationStepRate);
+        minSimulationStepRate = (int)GUILayout.HorizontalSlider(minSimulationStepRate, 0, 200);
+        GUILayout.Label("simulation speed factor: ");
+        GUILayout.Label("" + simulationSpeedMultiplicator);
+        simulationSpeedMultiplicator = GUILayout.HorizontalSlider(simulationSpeedMultiplicator, 0.0f, +100.0f);
+        GUILayout.Label("max speed: ");
+        GUILayout.Label("" + maxSpeed);
+        maxSpeed = GUILayout.HorizontalSlider(maxSpeed, 0.0f, +100.0f);
+        GUILayout.Label("friction per 1s: ");
+        GUILayout.Label(""+ friction);
+        friction = GUILayout.HorizontalSlider(friction, 0.0f, 1.0f);
+        GUILayout.Label("interaction strength: ");
+        GUILayout.Label("" + interactionStrength);
+        interactionStrength = GUILayout.HorizontalSlider(interactionStrength, -2000.0f, 2000.0f);
+        flatForce = GUILayout.Toggle(flatForce, "flat force");
+        
+        GUILayout.Space(25f);
+
+        GUILayout.Label("radius: " + radius);
+        radius = GUILayout.HorizontalSlider(radius, 0.0f, +50.0f);
+        GUILayout.Label("r_smooth: " + r_smooth );
+        r_smooth = GUILayout.HorizontalSlider(r_smooth, 0.0f, +10.0f);
+
+        GUILayout.Space(25f);
+
+        GUILayout.Label("gravity strength: ");
+        if (strGravityStrength == null)
+            strGravityStrength = "" + gravityStrength;
+        strGravityStrength = GUILayout.TextField(strGravityStrength);
+        float gravityStrengthFromStr;
+
+        if (GUI.changed)
+        if (float.TryParse(strGravityStrength, out gravityStrengthFromStr))
+        {
+            gravityStrength = gravityStrengthFromStr;
+            strGravityStrength = "" + gravityStrength;
+        }
+        //float gravityStrengthSlide = math.max(math.abs(gravityStrength / 2f), 1000f);
+        //gravityStrength = GUILayout.HorizontalSlider(gravityStrength, gravityStrength - gravityStrengthSlide, gravityStrength + gravityStrengthSlide);
+        gravityStrength = GUILayout.HorizontalSlider(gravityStrength, -1e9f,+1e9f);
+        if (GUI.changed)
+        {
+            strGravityStrength = "" + gravityStrength;
+        }
+
+        GUILayout.Label("max gravity: ");
+        GUILayout.Label("" + maxGravity);
+        maxGravity = GUILayout.HorizontalSlider(maxGravity, 0.0f, +100.0f);
+
+        GUILayout.Label("gravity target");
+        GUILayout.Label("x: " + gravityTarget.x);
+        gravityTarget.x = GUILayout.HorizontalSlider(gravityTarget.x, 0.0f, +1.0f);
+        GUILayout.Label("y: " + gravityTarget.y);
+        gravityTarget.y = GUILayout.HorizontalSlider(gravityTarget.y, 0.0f, +1.0f);
+        GUILayout.Label("z: " + gravityTarget.z);
+        gravityTarget.z = GUILayout.HorizontalSlider(gravityTarget.z, 0.0f, +1.0f);
+
+        //if (GUILayout.Button("Randomize Particle Types"))
+        //{
+        //    //randomizeSimulation();
+        //}
+
+        //GUILayout.Space(25f);
+
+        GUI_WindowControls(ref m_guiWindowRectSimulation, ref m_guiShowSimulation, ref m_guiWindowSimulationIsResizing);
+        GUI.DragWindow(m_guiDragArea);
     }
 
     void OnGuiConfirmClearWindow(int winID)
@@ -281,16 +560,48 @@ public class ParticleLife : MonoBehaviour
         if (GUILayout.Button("Clear Particles"))
         {
             clearParticles();
-            m_showConfirmClear = false;
+            m_guiShowConfirmClear = false;
         }
         GUILayout.Space(25f);
         if (GUILayout.Button("Cancel"))
         {
-            m_showConfirmClear = false;
+            m_guiShowConfirmClear = false;
         }
-        GUI.DragWindow(new Rect(0,0,10000,10));
+        GUI.DragWindow(m_guiDragArea);
+        
     }
 
+    void GUI_WindowControls(ref Rect windowRect, ref bool show, ref bool isResizing)
+    {
+        GUILayout.FlexibleSpace();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Close"))
+        {
+            show = false;
+        }
+        GUILayout.FlexibleSpace();
+        GUILayout.Box("resize", GUILayout.MinWidth(20), GUILayout.MaxHeight(20));
+        if (Event.current.type == EventType.MouseUp)
+        {
+            isResizing = false;
+        }
+        else if (Event.current.type == EventType.MouseDown &&
+                 GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
+        {
+            isResizing = true;
+        }
+        if (isResizing)
+        {
+            windowRect = new Rect(windowRect.x, windowRect.y,
+                windowRect.width + Event.current.delta.x, windowRect.height + Event.current.delta.y);
+        }
+        GUILayout.EndHorizontal();
+    }
+
+
+    #endregion
+
+    #region user commands
     void updateParticleTypeNumber()
     {
         initParticleTypeArrays(numParticleTypes);
@@ -316,31 +627,6 @@ public class ParticleLife : MonoBehaviour
         setRandomTypes();
         setSystemTypeArrays();
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if (numParticleTypes != m_numTypes)
-        {
-            updateParticleTypeNumber();
-        }
-        if (Input.GetKeyDown("space"))
-        {
-            spawnParticles();
-        }
-        if (Input.GetKeyDown("c"))
-        {
-            clearParticles();
-        }
-        if (Input.GetKeyDown("r"))
-        {
-            respawnParticles();
-        }
-        if (Input.GetKeyDown("t"))
-        {
-            randomizeParticleTypes();
-        }
-    }
     void clearParticles()
     {
         for (int i = 0; i < m_entities.Length; i++)
@@ -350,8 +636,6 @@ public class ParticleLife : MonoBehaviour
         m_entities.Clear();
         //fps.numParticles = particles.Count;
     }
-
-
     void addParticles(int num)
     {
         NativeArray<Entity> particles = new NativeArray<Entity>(num, Allocator.Temp);
@@ -374,12 +658,19 @@ public class ParticleLife : MonoBehaviour
             int type = Random.Range(0, m_numTypes);
             var mat = (type < m_adjustedMaterials.Count) ? m_adjustedMaterials[type] : particleMaterial;
             m_manager.SetComponentData(particles[i], new Translation { Value = new float3(x, y, z) });
-            m_manager.SetComponentData(particles[i], new Particle { type = type, vel = new float3(vx, vy, vz), cell_number=-1 });
-            m_manager.SetComponentData(particles[i], new Scale { Value = radius*2f });
+            m_manager.SetComponentData(particles[i], new Particle { type = type, vel = new float3(vx, vy, vz), cell_number = -1 });
+            m_manager.SetComponentData(particles[i], new Scale { Value = radius * 2f });
             m_manager.SetSharedComponentData(particles[i], new RenderMesh { material = mat, mesh = particleMesh });
             m_entities.Add(particles[i]);
         }
 
         particles.Dispose();
     }
+    #endregion
+
+
+
+
+
+
 }

@@ -442,13 +442,20 @@ MonoBehaviour:
   rangeMinUpper: 20
   rangeMaxLower: 10
   rangeMaxUpper: 50
-  minSimulationStepRate: 25
+  minSimulationStepRate: 50
+  simulationSpeedMultiplicator: 2
   maxSpeed: 5
   friction: 0.995
   interactionStrength: 100
   radius: 5
   r_smooth: 2
   flatForce: 0
+  gravityTarget:
+    x: 0.5
+    y: 0.5
+    z: 0.5
+  gravityStrength: 100000000
+  maxGravity: 10
   lowerBound:
     x: -1000
     y: -1000
