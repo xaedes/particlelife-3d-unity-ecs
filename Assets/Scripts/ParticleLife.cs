@@ -38,6 +38,8 @@ public class ParticleLife : MonoBehaviour
 
     [Header("Gravity")]
     public float3 gravityTarget = 0.5f;
+    public float gravityTargetRange = 0.0f;
+    public bool gravityLinear = false;
     public float gravityStrength = 1e8f;
     public float maxGravity = 7f;
 
@@ -438,7 +440,7 @@ public class ParticleLife : MonoBehaviour
         GUILayout.Label("num particles: " + m_entities.Length);
         GUILayout.Label("frames per sec: " + (((int)(m_fps * 10 + 0.5f)) / 10.0f));
         //GUILayout.Label("fps: " + (((int)(m_fps * 10)) / 10.0f));
-        GUILayout.Space(25f);
+        GUILayout.Space(15f);
 
         GUILayout.Label("spawn count: " + spawnCount);
         spawnCount = (int)GUILayout.HorizontalSlider(spawnCount, 1, 1000);
@@ -527,7 +529,7 @@ public class ParticleLife : MonoBehaviour
         //GUILayout.Label("sim fps: " + (((int)(m_simfps * 10)) / 10.0f));
         GUILayout.Label("min steps per simulated sec: ");
         GUILayout.Label("" + minSimulationStepRate);
-        minSimulationStepRate = (int)GUILayout.HorizontalSlider(minSimulationStepRate, 0, 200);
+        minSimulationStepRate = (int)GUILayout.HorizontalSlider(minSimulationStepRate, 0, 500);
         GUILayout.Label("simulation speed factor: ");
         GUILayout.Label("" + simulationSpeedMultiplicator);
         simulationSpeedMultiplicator = GUILayout.HorizontalSlider(simulationSpeedMultiplicator, 0.0f, +100.0f);
@@ -552,7 +554,7 @@ public class ParticleLife : MonoBehaviour
                 interactionStrength = interactionStrengthFromStr;
                 strInteractionStrength  = "" + interactionStrength;
             }
-        interactionStrength = GUILayout.HorizontalSlider(interactionStrength, -2000.0f, 2000.0f);
+        interactionStrength = GUILayout.HorizontalSlider(interactionStrength, -200.0f, 1000.0f);
         if (GUI.changed)
         {
             strInteractionStrength  = "" + interactionStrength;
@@ -587,10 +589,14 @@ public class ParticleLife : MonoBehaviour
         {
             strGravityStrength = "" + gravityStrength;
         }
+        gravityLinear = GUILayout.Toggle(gravityLinear, "linear gravity instead of quadratic");
 
-        GUILayout.Label("max gravity: ");
-        GUILayout.Label("" + maxGravity);
-        maxGravity = GUILayout.HorizontalSlider(maxGravity, 0.0f, +100.0f);
+        GUILayout.Label("max gravity: " + maxGravity);
+        maxGravity = GUILayout.HorizontalSlider(maxGravity, 0.0f, +1000.0f);
+
+        GUILayout.Label("gravity target range: ");
+        GUILayout.Label("" + gravityTargetRange);
+        gravityTargetRange = GUILayout.HorizontalSlider(gravityTargetRange, 0.0f, +1000.0f);
 
         GUILayout.Label("gravity target");
         GUILayout.Label("x: " + gravityTarget.x);

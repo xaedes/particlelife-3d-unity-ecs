@@ -472,8 +472,10 @@ MonoBehaviour:
     x: 0.5
     y: 0.5
     z: 0.5
-  gravityStrength: 100000000
-  maxGravity: 10
+  gravityTargetRange: 250
+  gravityLinear: 0
+  gravityStrength: 1e+9
+  maxGravity: 50
   lowerBound:
     x: -1000
     y: -1000
@@ -486,6 +488,7 @@ MonoBehaviour:
   wrapY: 1
   wrapZ: 1
   bounce: 1
+  drawWorldBounds: 1
   spawnCount: 200
   creationBoxSize:
     x: 0.125

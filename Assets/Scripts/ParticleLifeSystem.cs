@@ -128,7 +128,6 @@ public class ParticleLifeSystem : JobComponentSystem
         public float bounce;
         public float eps;
         public float strength;
-        public float radius;
         public float r_smooth;
         public bool flatForce;
         public int numTypes;
@@ -136,6 +135,8 @@ public class ParticleLifeSystem : JobComponentSystem
         [ReadOnly] public NativeArray<float> RangeMin;
         [ReadOnly] public NativeArray<float> RangeMax;
         public float3 gravityTarget;
+        public float gravityTargetRange;
+        public bool gravityLinear;
         public float gravityStrength;
         public float maxGravity;
 
@@ -244,11 +245,15 @@ public class ParticleLifeSystem : JobComponentSystem
                 if (range > eps)
                 {
                     float3 direction = diff / range;
-                    float g = gravityStrength / (range * range);
-                    if (g < -abs(maxGravity)) g = -abs(maxGravity);
-                    if (g > +abs(maxGravity)) g = +abs(maxGravity);
-                    particle.vel = particle.vel + direction * g * dt;
-
+                    float rangeDiff = gravityTargetRange - range;
+                    if (abs(rangeDiff) > eps)
+                    {
+                        float g = gravityStrength / (gravityLinear ? -rangeDiff : (rangeDiff * rangeDiff));
+                        if (!gravityLinear && rangeDiff > 0) g = -g;
+                        if (g < -abs(maxGravity)) g = -abs(maxGravity);
+                        if (g > +abs(maxGravity)) g = +abs(maxGravity);
+                        particle.vel = particle.vel + direction * g * dt;
+                    }
                 }
             }
 
@@ -481,7 +486,6 @@ public class ParticleLifeSystem : JobComponentSystem
             job.dt = particleLife.simulationSpeedMultiplicator * UnityEngine.Time.deltaTime;
         }
         lastSimulationDeltaTime = job.dt;
-        job.radius = particleLife.radius;
         job.r_smooth = particleLife.r_smooth;
         job.flatForce = particleLife.flatForce;
         job.friction = particleLife.friction;
@@ -505,6 +509,8 @@ public class ParticleLifeSystem : JobComponentSystem
         job.bounce = particleLife.bounce;
 
         job.gravityTarget = particleLife.gravityTarget * job.dim + job.lowerBound;
+        job.gravityTargetRange = particleLife.gravityTargetRange;
+        job.gravityLinear = particleLife.gravityLinear;
         job.gravityStrength = particleLife.gravityStrength;
         job.maxGravity = particleLife.maxGravity;
 
