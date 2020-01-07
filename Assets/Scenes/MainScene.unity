@@ -459,8 +459,9 @@ MonoBehaviour:
   rangeMaxLower: 10
   rangeMaxUpper: 50
   minSimulationStepRate: 50
-  simulationSpeedMultiplicator: 2
-  maxSpeed: 5
+  simulationSpeedMultiplicator: 1
+  simulationSpeedMultiplicator2: 2
+  maxSpeed: 10
   friction: 0.995
   frictionTime: 0.1
   interactionStrength: 100
@@ -468,6 +469,7 @@ MonoBehaviour:
   radiusVariation: 1
   r_smooth: 2
   flatForce: 0
+  cellSize: 50
   gravityTarget:
     x: 0.5
     y: 0.5

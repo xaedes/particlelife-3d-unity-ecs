@@ -8,5 +8,4 @@ public struct Particle : IComponentData
 {
     public int type;
     public float3 vel;
-    public int cell_number;
 }
