@@ -37,8 +37,9 @@ public class DrawWorldBounds : MonoBehaviour
     };
     void drawLines()
     {
-        float3 dim = particleLife.upperBound - particleLife.lowerBound;
-        float3 center = (particleLife.upperBound + particleLife.lowerBound) * 0.5f;
+        if (particleLife == null || particleLife.settings == null) return;
+        float3 dim = particleLife.settings.upperBound - particleLife.settings.lowerBound;
+        float3 center = (particleLife.settings.upperBound + particleLife.settings.lowerBound) * 0.5f;
         if (cube_vertices.Length > 0 && cube_lines.Length > 0)
         {
             material.SetPass(0);
@@ -56,7 +57,7 @@ public class DrawWorldBounds : MonoBehaviour
 
     private void Update()
     {
-        Enabled = particleLife.drawWorldBounds;
+        Enabled = particleLife.settings.drawWorldBounds;
     }
 
     void OnPostRender()

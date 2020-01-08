@@ -836,21 +836,21 @@ public class ParticleLifeSystem : JobComponentSystem
 
         #region update grid meta
         if (m_grid.seqNum <= 0) m_grid.seqNum = 1;
-        m_grid.lowerBound = particleLife.lowerBound;
-        m_grid.cellSize = particleLife.cellSize;
+        m_grid.lowerBound = particleLife.settings.lowerBound;
+        m_grid.cellSize = particleLife.settings.cellSize;
 
         if (m_grid.cellSize <= 0) m_grid.cellSize = 50.0f;
 
-        m_grid.dim = particleLife.upperBound - particleLife.lowerBound;
+        m_grid.dim = particleLife.settings.upperBound - particleLife.settings.lowerBound;
         m_grid.gridSize.x = (int)math.ceil(m_grid.dim.x / m_grid.cellSize);
         m_grid.gridSize.y = (int)math.ceil(m_grid.dim.y / m_grid.cellSize);
         m_grid.gridSize.z = (int)math.ceil(m_grid.dim.z / m_grid.cellSize);
         if (m_grid.gridSize.x < 1) m_grid.gridSize.x = 1;
         if (m_grid.gridSize.y < 1) m_grid.gridSize.y = 1;
         if (m_grid.gridSize.z < 1) m_grid.gridSize.z = 1;
-        m_grid.wrapX = particleLife.wrapX;
-        m_grid.wrapY = particleLife.wrapY;
-        m_grid.wrapZ = particleLife.wrapZ;
+        m_grid.wrapX = particleLife.settings.wrapX;
+        m_grid.wrapY = particleLife.settings.wrapY;
+        m_grid.wrapZ = particleLife.settings.wrapZ;
         m_grid.numCells = m_grid.gridSize.x * m_grid.gridSize.y * m_grid.gridSize.z;
         lastNumCells = m_grid.numCells;
         m_grid.seqNum++;
@@ -902,23 +902,23 @@ public class ParticleLifeSystem : JobComponentSystem
         #region particle life job, that is O(NumParticles*maxCellSize)
         var job = new ParticleLifeSystemJobFor();
         job.eps = 1e-6f;
-        float speedFactor = particleLife.simulationSpeedMultiplicator * particleLife.simulationSpeedMultiplicator2;
-        float scaledRealtime = speedFactor * UnityEngine.Time.deltaTime;
-        if (abs(particleLife.minSimulationStepRate) > job.eps)
+        float scaledRealtime = particleLife.settings.simulationSpeedMultiplicator2 * UnityEngine.Time.deltaTime;
+        if (abs(particleLife.settings.minSimulationStepRate) > job.eps)
         {
-            job.dt = min(1.0f / abs(particleLife.minSimulationStepRate), scaledRealtime);
+            job.dt = particleLife.settings.simulationSpeedMultiplicator * min(1.0f / abs(particleLife.settings.minSimulationStepRate), scaledRealtime);
         }
         else
         {
-            job.dt = scaledRealtime;
+            job.dt = particleLife.settings.simulationSpeedMultiplicator * scaledRealtime;
         }
+        
         lastSimulationDeltaTime = job.dt;
-        job.r_smooth = particleLife.r_smooth;
-        job.flatForce = particleLife.flatForce;
-        job.friction = particleLife.friction;
-        job.frictionTime = particleLife.frictionTime;
-        job.strength = particleLife.interactionStrength;
-        job.maxSpeed = particleLife.maxSpeed;
+        job.r_smooth = particleLife.settings.r_smooth;
+        job.flatForce = particleLife.settings.flatForce;
+        job.friction = particleLife.settings.friction;
+        job.frictionTime = particleLife.settings.frictionTime;
+        job.strength = particleLife.settings.interactionStrength;
+        job.maxSpeed = particleLife.settings.maxSpeed;
 
 
         job.numTypes = m_copyOfNumTypes;
@@ -926,20 +926,20 @@ public class ParticleLifeSystem : JobComponentSystem
         job.RangeMin = m_copyOfRangeMin;
         job.RangeMax = m_copyOfRangeMax;
 
-        job.lowerBound = particleLife.lowerBound;
-        job.upperBound = particleLife.upperBound;
+        job.lowerBound = particleLife.settings.lowerBound;
+        job.upperBound = particleLife.settings.upperBound;
         job.dim = job.upperBound - job.lowerBound;
         job.halfDim = job.dim * 0.5f;
-        job.wrapX = particleLife.wrapX;
-        job.wrapY = particleLife.wrapY;
-        job.wrapZ = particleLife.wrapZ;
-        job.bounce = particleLife.bounce;
+        job.wrapX = particleLife.settings.wrapX;
+        job.wrapY = particleLife.settings.wrapY;
+        job.wrapZ = particleLife.settings.wrapZ;
+        job.bounce = particleLife.settings.bounce;
 
-        job.gravityTarget = particleLife.gravityTarget * job.dim + job.lowerBound;
-        job.gravityTargetRange = particleLife.gravityTargetRange;
-        job.gravityLinear = particleLife.gravityLinear;
-        job.gravityStrength = particleLife.gravityStrength;
-        job.maxGravity = particleLife.maxGravity;
+        job.gravityTarget = particleLife.settings.gravityTarget * job.dim + job.lowerBound;
+        job.gravityTargetRange = particleLife.settings.gravityTargetRange;
+        job.gravityLinear = particleLife.settings.gravityLinear;
+        job.gravityStrength = particleLife.settings.gravityStrength;
+        job.maxGravity = particleLife.settings.maxGravity;
 
         job.oldTranslations = m_query.ToComponentDataArray<Translation>(Allocator.TempJob);
         job.oldParticles = m_query.ToComponentDataArray<Particle>(Allocator.TempJob);
