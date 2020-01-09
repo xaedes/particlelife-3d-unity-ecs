@@ -523,7 +523,7 @@ MonoBehaviour:
     x: 0.5
     y: 0.5
     z: 0.5
-  gravityTargetRange: 500
+  gravityTargetRange: 0
   gravityLinear: 0
   gravityStrength: 1e+9
   maxGravity: 7
@@ -578,7 +578,11 @@ MonoBehaviour:
   settings: {fileID: 2086709356}
   types: {fileID: 2086709357}
   particleLife: {fileID: 2086709354}
-  cameraSettings: {fileID: 0}
+  cameraSettings: {fileID: 963194231}
+  examples:
+  - {fileID: 4900000, guid: 0f195f35da0f6384ab336138594deefb, type: 3}
+  - {fileID: 4900000, guid: 7b7d86fb7fc525c4d9c3b6ab768684ac, type: 3}
+  - {fileID: 4900000, guid: dae720e2052b0124d85e948e1d8f5186, type: 3}
   m_guiDragArea:
     serializedVersion: 2
     x: 0
@@ -668,6 +672,7 @@ MonoBehaviour:
   m_guiWindowSimulationScrollPosition: {x: 0, y: 0}
   m_guiWindowStatsScrollPosition: {x: 0, y: 0}
   m_guiWindowLibraryScrollPosition: {x: 0, y: 0}
+  m_guiWindowLibraryLeftColScrollPosition: {x: 0, y: 0}
   m_guiWorldBoxCenter:
     x: 0
     y: 0
@@ -679,13 +684,3 @@ MonoBehaviour:
   m_guiWorldBoxSizeMaxValue: 0
   m_guiCubeWorldBox: 0
   m_guiLibraryTextAreaString: 
-  m_guiLibraryWriteDownSettings: 0
-  m_guiLibraryWriteDownParticles: 0
-  m_guiLibraryWriteDownTypes: 0
-  m_guiLibraryWriteDownCamera: 0
-  m_guiLibraryReadOutSettings: 1
-  m_guiLibraryReadOutParticles: 1
-  m_guiLibraryReadOutTypes: 1
-  m_guiLibraryReadOutCamera: 1
-  m_guiLibraryWriteDownAdvanced: 1
-  m_guiLibraryWriteDownEncoding: 2

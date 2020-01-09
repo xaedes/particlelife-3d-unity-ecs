@@ -1,14 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 using Unity.Mathematics;
-
+using System.Runtime.InteropServices;
 public class ParticleLifeGui : MonoBehaviour
 {
     public ParticleLifeSettings settings;
     public ParticleTypes types;
     public ParticleLife particleLife;
     public CameraSettings cameraSettings;
+
+    public TextAsset[] examples;
 
     void Start()
     {
@@ -46,7 +49,7 @@ public class ParticleLifeGui : MonoBehaviour
     public Rect m_guiWindowRectGravity = new Rect(c_guiLeft + 4 * c_guiDefaultWinWidth, 320, c_guiDefaultWinWidth, 400);
     public Rect m_guiWindowRectWorldBounds = new Rect(20 + c_guiLeft + 5 * c_guiDefaultWinWidth, 320, c_guiDefaultWinWidth, 200);
     public Rect m_guiWindowRectStats = new Rect(c_guiLeft + 1 * c_guiDefaultWinWidth, 20, c_guiDefaultWinWidth, 300);
-    public Rect m_guiWindowRectLibrary = new Rect(c_guiLeft + 2 * c_guiDefaultWinWidth, 20, 50+c_guiDefaultWinWidth, 300);
+    public Rect m_guiWindowRectLibrary = new Rect(c_guiLeft + 2 * c_guiDefaultWinWidth, 20, 2*c_guiDefaultWinWidth, 300);
 
     public bool m_guiShowMain = true;
     public bool m_guiShowConfirmClear = false;
@@ -73,6 +76,7 @@ public class ParticleLifeGui : MonoBehaviour
     public Vector2 m_guiWindowSimulationScrollPosition;
     public Vector2 m_guiWindowStatsScrollPosition;
     public Vector2 m_guiWindowLibraryScrollPosition;
+    public Vector2 m_guiWindowLibraryLeftColScrollPosition;
 
 
     private void OnGUI()
@@ -531,86 +535,219 @@ public class ParticleLifeGui : MonoBehaviour
     }
 
     public string m_guiLibraryTextAreaString = "";
-    public bool m_guiLibraryWriteDownSettings = false;
-    public bool m_guiLibraryWriteDownParticles = false;
-    public bool m_guiLibraryWriteDownTypes = false;
-    public bool m_guiLibraryWriteDownCamera = false;
-    public bool m_guiLibraryReadOutSettings = true;
-    public bool m_guiLibraryReadOutParticles = true;
-    public bool m_guiLibraryReadOutTypes = true;
-    public bool m_guiLibraryReadOutCamera = true;
+    bool m_guiLibraryWriteDownSettings = true;
+    bool m_guiLibraryWriteDownParticles = true;
+    bool m_guiLibraryWriteDownTypes = true;
+    bool m_guiLibraryWriteDownCamera = true;
+    bool m_guiLibraryReadOutSettings = true;
+    bool m_guiLibraryReadOutParticles = true;
+    bool m_guiLibraryReadOutTypes = true;
+    bool m_guiLibraryReadOutCamera = true;
 
-    public bool m_guiLibraryWriteDownAdvanced = true;
-    public int m_guiLibraryWriteDownEncoding = 2;
+    bool m_guiLibraryWriteDownAdvanced = false;
+    int m_guiLibraryWriteDownEncoding = 2;
+    bool m_guiLibraryShowExamples = true;
+    bool m_guiLibraryShowWriteDown = true;
+    bool m_guiLibraryShowReadOut = true;
+
+    void loadExamples()
+    {
+        //string[] exampleAssets = AssetDatabase.FindAssets("t:TextAsset l:Example");
+
+    }
+
+    [DllImport("__Internal")]
+    private static extern void WebGLCopyToClipboard(string text);
+    [DllImport("__Internal")]
+    private static extern void WebGLRequestClipboardPaste(string objectName);
 
     void OnGUIWindowLibrary(int winID)
     {
-        if (GUILayout.Button("Write down"))
-        {
-            DataSerializer.EncodingType encoding = (DataSerializer.EncodingType)(
-                m_guiLibraryWriteDownEncoding % (int)DataSerializer.EncodingType.COUNT);
-
-            SerializeBundle serialize = new SerializeBundle(
-                m_guiLibraryWriteDownSettings ? new SerializeSettings(ref settings) : null,
-                m_guiLibraryWriteDownParticles ? new SerializeParticles(ref particleLife, encoding) : null,
-                m_guiLibraryWriteDownTypes ? new SerializeTypes(ref types, encoding) : null,
-                m_guiLibraryWriteDownCamera ? new SerializeCamera(ref cameraSettings) : null
-
-            );
-            m_guiLibraryTextAreaString = serialize.ToJson();
-        }
+        bool doLoad = false;
         GUILayout.BeginHorizontal();
-        //GUILayout.Label("write down");
-        m_guiLibraryWriteDownCamera = GUILayout.Toggle(m_guiLibraryWriteDownCamera, "cam");
-        m_guiLibraryWriteDownSettings = GUILayout.Toggle(m_guiLibraryWriteDownSettings, "settings");
-        m_guiLibraryWriteDownTypes = GUILayout.Toggle(m_guiLibraryWriteDownTypes, "types");
-        m_guiLibraryWriteDownParticles = GUILayout.Toggle(m_guiLibraryWriteDownParticles, "particles");
-        GUILayout.EndHorizontal();
-        m_guiLibraryWriteDownAdvanced = GUILayout.Toggle(m_guiLibraryWriteDownAdvanced, "advanced options");
-        if (m_guiLibraryWriteDownAdvanced)
         {
-            string[] encoding_options = { "decimal", "hexbin", "zipb64" };
-            m_guiLibraryWriteDownEncoding = GUILayout.Toolbar(m_guiLibraryWriteDownEncoding, encoding_options);
-        }
-        GUILayout.Space(5);
+            #region left column: controls
+            GUILayout.BeginVertical(GUILayout.Width(200));
+            {
 
-        if (GUILayout.Button("Read out"))
-        {
-            SerializeBundle serialized = SerializeBundle.FromJson(ref m_guiLibraryTextAreaString);
-            if (m_guiLibraryReadOutCamera && serialized.camera != null)
-            {
-                serialized.camera.readOut(ref cameraSettings);
+                //GUILayout.BeginHorizontal();
+                //m_guiLibraryShowExamples = GUILayout.Toggle(m_guiLibraryShowExamples, "examples");
+                //m_guiLibraryShowWriteDown = GUILayout.Toggle(m_guiLibraryShowWriteDown, "save");
+                //GUILayout.EndHorizontal();
+
+                GUILayout.Label("Examples");
+
+                m_guiWindowLibraryLeftColScrollPosition = GUILayout.BeginScrollView(m_guiWindowLibraryLeftColScrollPosition);
+                if (m_guiLibraryShowExamples)
+                {
+                    for (int i = 0; i < examples.Length; i++)
+                    {
+                        //Debug.Log(examples[i].name);
+                        var name = examples[i].name;
+                        name = name.Replace("_", " ");
+                        if (GUILayout.Button(name))
+                        {
+                            m_guiLibraryTextAreaString = examples[i].text;
+                            doLoad = true;
+                        }
+                    }
+                }
+                GUILayout.EndScrollView();
+
+
             }
-            if (m_guiLibraryReadOutSettings && serialized.particleLife != null)
+            GUILayout.EndVertical();
+            #endregion
+
+            #region right column: text area
+            GUILayout.BeginVertical(GUILayout.Width(200));
             {
-                serialized.particleLife.readOut(ref settings);
+                if (m_guiLibraryShowWriteDown)
+                {
+                    if (GUILayout.Button("Save to JSON text") && !doLoad)
+                    {
+                        DataSerializer.EncodingType encoding = (DataSerializer.EncodingType)(
+                            m_guiLibraryWriteDownEncoding % (int)DataSerializer.EncodingType.COUNT);
+
+                        SerializeBundle serialize = new SerializeBundle(
+                            m_guiLibraryWriteDownSettings ? new SerializeSettings(ref settings) : null,
+                            m_guiLibraryWriteDownParticles ? new SerializeParticles(ref particleLife, encoding) : null,
+                            m_guiLibraryWriteDownTypes ? new SerializeTypes(ref types, encoding) : null,
+                            m_guiLibraryWriteDownCamera ? new SerializeCamera(ref cameraSettings) : null
+
+                        );
+                        m_guiLibraryTextAreaString = serialize.ToJson();
+                    }
+                    GUILayout.BeginHorizontal();
+                    //GUILayout.Label("write down");
+                    m_guiLibraryWriteDownCamera = GUILayout.Toggle(m_guiLibraryWriteDownCamera, "cam");
+                    m_guiLibraryWriteDownSettings = GUILayout.Toggle(m_guiLibraryWriteDownSettings, "settings");
+                    m_guiLibraryWriteDownTypes = GUILayout.Toggle(m_guiLibraryWriteDownTypes, "types");
+                    m_guiLibraryWriteDownParticles = GUILayout.Toggle(m_guiLibraryWriteDownParticles, "particles");
+                    GUILayout.EndHorizontal();
+                    m_guiLibraryWriteDownAdvanced = GUILayout.Toggle(m_guiLibraryWriteDownAdvanced, "advanced options");
+                    if (m_guiLibraryWriteDownAdvanced)
+                    {
+                        string[] encoding_options = { "decimal", "hexbin", "zipb64" };
+                        m_guiLibraryWriteDownEncoding = GUILayout.Toolbar(m_guiLibraryWriteDownEncoding, encoding_options);
+                    }
+                }
+
+
+                GUILayout.BeginHorizontal();
+                {
+ 
+                    if (GUILayout.Button("Load from JSON text") || doLoad)
+                    {
+                        SerializeBundle serialized = SerializeBundle.FromJson(ref m_guiLibraryTextAreaString);
+                        if (m_guiLibraryReadOutCamera && serialized.camera != null)
+                        {
+                            serialized.camera.readOut(ref cameraSettings);
+                        }
+                        if (m_guiLibraryReadOutSettings && serialized.particleLife != null)
+                        {
+                            serialized.particleLife.readOut(ref settings);
+                        }
+                        if (m_guiLibraryReadOutParticles && serialized.particles != null)
+                        {
+                            serialized.particles.readOut(ref particleLife);
+                        }
+                        if (m_guiLibraryReadOutTypes && serialized.types != null)
+                        {
+                            serialized.types.readOut(ref types, ref settings, ref particleLife);
+                        }
+                    }
+                    //GUILayout.FlexibleSpace();
+
+                }
+                GUILayout.EndHorizontal();
+
+                GUILayout.BeginHorizontal();
+                m_guiLibraryReadOutCamera = GUILayout.Toggle(m_guiLibraryReadOutCamera, "cam");
+                m_guiLibraryReadOutSettings = GUILayout.Toggle(m_guiLibraryReadOutSettings, "settings");
+                m_guiLibraryReadOutTypes = GUILayout.Toggle(m_guiLibraryReadOutTypes, "types");
+                m_guiLibraryReadOutParticles = GUILayout.Toggle(m_guiLibraryReadOutParticles, "particles");
+                GUILayout.EndHorizontal();
+
+
+                GUILayout.BeginVertical(GUILayout.MinHeight(200), GUILayout.MaxHeight(512));
+                m_guiWindowLibraryScrollPosition = GUILayout.BeginScrollView(m_guiWindowLibraryScrollPosition);
+                GUI.SetNextControlName("LibraryText");
+                m_guiLibraryTextAreaString = GUILayout.TextArea(m_guiLibraryTextAreaString);
+                GUILayout.EndScrollView();
+                GUILayout.EndVertical();
+                GUILayout.FlexibleSpace();
+
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("select all") )
+                {
+                    GUI.FocusControl("LibraryText");
+                    TextEditor te = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
+                    te.SelectAll();
+                }
+                if (GUILayout.Button("copy") )
+                {
+                    //Application.ExternalCall("CopyToClipboard", m_guiLibraryTextAreaString);
+                    if (Application.platform == RuntimePlatform.WebGLPlayer)
+                    {
+                        WebGLCopyToClipboard(m_guiLibraryTextAreaString);
+                    }
+                    else
+                    {
+                        GUIUtility.systemCopyBuffer = m_guiLibraryTextAreaString;
+                    }
+                }
+                if (GUILayout.Button("paste") )
+                {
+                    if (Application.platform == RuntimePlatform.WebGLPlayer)
+                    {
+                        m_guiLibraryTextAreaWantsClipboardPaste = true;
+                        WebGLRequestClipboardPaste(gameObject.name);
+                    }
+                    else
+                    {
+                        m_guiLibraryTextAreaString = GUIUtility.systemCopyBuffer;
+                    }
+                }
+                if (GUILayout.Button("cut") )
+                {
+                    if (Application.platform == RuntimePlatform.WebGLPlayer)
+                    {
+
+                        WebGLCopyToClipboard(m_guiLibraryTextAreaString);
+                    }
+                    else
+                    {
+                        GUIUtility.systemCopyBuffer = m_guiLibraryTextAreaString;
+                    }
+                    //Application.ExternalCall("CopyToClipboard", m_guiLibraryTextAreaString);
+                    m_guiLibraryTextAreaString = "";
+                }
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("clear") || doLoad)
+                {
+                    m_guiLibraryTextAreaString = "";
+                }
+                GUILayout.EndHorizontal();
             }
-            if (m_guiLibraryReadOutParticles && serialized.particles != null)
-            {
-                serialized.particles.readOut(ref particleLife);
-            }
-            if (m_guiLibraryReadOutTypes && serialized.types != null)
-            {
-                serialized.types.readOut(ref types, ref settings, ref particleLife);
-            }
+            GUILayout.EndVertical();
+            #endregion
         }
-        GUILayout.BeginHorizontal();
-        //GUILayout.Label("write down");
-        m_guiLibraryReadOutCamera = GUILayout.Toggle(m_guiLibraryReadOutCamera, "cam");
-        m_guiLibraryReadOutSettings = GUILayout.Toggle(m_guiLibraryReadOutSettings, "settings");
-        m_guiLibraryReadOutTypes = GUILayout.Toggle(m_guiLibraryReadOutTypes, "types");
-        m_guiLibraryReadOutParticles = GUILayout.Toggle(m_guiLibraryReadOutParticles, "particles");
         GUILayout.EndHorizontal();
-
-        GUILayout.Space(5);
-        GUILayout.BeginVertical(GUILayout.MinHeight(64), GUILayout.MaxHeight(512));
-        m_guiWindowLibraryScrollPosition = GUILayout.BeginScrollView(m_guiWindowLibraryScrollPosition);
-        m_guiLibraryTextAreaString = GUILayout.TextArea(m_guiLibraryTextAreaString);
-        GUILayout.EndScrollView();
-        GUILayout.EndVertical();
 
         GUI_WindowControls(ref m_guiWindowRectLibrary, ref m_guiShowLibrary, ref m_guiWindowLibraryIsResizing);
         GUI.DragWindow(m_guiDragArea);
+    }
+    bool m_guiLibraryTextAreaWantsClipboardPaste = false;
+
+    public void WebGLReceiveClipboardPaste(string text)
+    {
+        if (Application.platform != RuntimePlatform.WebGLPlayer) return;
+        if (m_guiLibraryTextAreaWantsClipboardPaste)
+        {
+            m_guiLibraryTextAreaString = text;
+            m_guiLibraryTextAreaWantsClipboardPaste = false;
+        }
     }
 
     void GUI_WindowControls(ref Rect windowRect, ref bool show, ref bool isResizing)
