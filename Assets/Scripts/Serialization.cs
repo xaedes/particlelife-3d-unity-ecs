@@ -140,6 +140,7 @@ public class SerializeCamera
         cam_settings.control.dragSpeed = moveSpeed;
         cam_settings.transform.position = pos;
         cam_settings.transform.rotation = new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
+        cam_settings.control.UpdateFromCurrentCamera();
     }
     public string ToJson()
     {
@@ -334,6 +335,8 @@ public class SerializeTypes
         if (numTypes * numTypes != _r_max.Length) return false;
         settings.numParticleTypes = numTypes;
         types.initParticleTypeArrays(numTypes);
+        particles.generateMaterials();
+        particles.updateParticleTypesAndMaterials();
         types.m_Attract.CopyFrom(_attract);
         types.m_RangeMin.CopyFrom(_r_min);
         types.m_RangeMax.CopyFrom(_r_max);
@@ -341,8 +344,6 @@ public class SerializeTypes
         _r_min.Dispose();
         _r_max.Dispose();
         types.updateMaxRangeMax();
-        particles.generateMaterials();
-        particles.updateParticleTypesAndMaterials();
         particles.setSystemTypeArrays();
         return true;
     }

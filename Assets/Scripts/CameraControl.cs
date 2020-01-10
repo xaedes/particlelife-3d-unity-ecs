@@ -13,6 +13,11 @@ public class CameraControl : MonoBehaviour
     
     private void Start()
     {
+        UpdateFromCurrentCamera();
+    }
+
+    public void UpdateFromCurrentCamera()
+    {
         // x - right    pitch
         // y - up       yaw
         // z - forward  roll

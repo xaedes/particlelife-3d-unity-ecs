@@ -648,14 +648,18 @@ public class ParticleLifeGui : MonoBehaviour
                         {
                             serialized.particleLife.readOut(ref settings);
                         }
-                        if (m_guiLibraryReadOutParticles && serialized.particles != null)
-                        {
-                            serialized.particles.readOut(ref particleLife);
-                        }
+
+                        // must read out types before particles, because particles readout will change 
+                        // types to be valid with current number of types
                         if (m_guiLibraryReadOutTypes && serialized.types != null)
                         {
                             serialized.types.readOut(ref types, ref settings, ref particleLife);
                         }
+                        if (m_guiLibraryReadOutParticles && serialized.particles != null)
+                        {
+                            serialized.particles.readOut(ref particleLife);
+                        }
+
                     }
                     //GUILayout.FlexibleSpace();
 
